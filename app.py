@@ -71,6 +71,14 @@ if ads_file and pmf_file and gran_file:
     status.write("Loading PMF multipliers...")
 
     # --------------------------------------------------
+# 🌍 Geography Normalization Helper
+# --------------------------------------------------
+    def normalize_geo(name: str):
+        """Treat BOSE.COM, BOSE_COM, and BOSE COM as identical."""
+        return str(name).strip().upper().replace(".", "").replace("_", "").replace(" ", "")
+
+
+    # --------------------------------------------------
     # STEP 2 — PMF
     # --------------------------------------------------
     pmf = pd.read_excel(pmf_file, sheet_name="PMF", dtype=str)
@@ -99,9 +107,10 @@ if ads_file and pmf_file and gran_file:
     pmf_long["PMF_MULT"] = pd.to_numeric(pmf_long["PMF_MULT"], errors="coerce")
 
     pmf_dict = {
-        (g, s, v): m for g, s, v, m in
-        pmf_long[["GEOGRAPHY", "SEASON", "VARIABLE", "PMF_MULT"]].itertuples(index=False)
+       (normalize_geo(g), str(s).strip().upper(), str(v).strip().upper()): m
+       for g, s, v, m in pmf_long[["GEOGRAPHY", "SEASON", "VARIABLE", "PMF_MULT"]].itertuples(index=False)
     }
+
 
     progress.progress(40)
     status.write("Loading Granular Spec skip logic...")
@@ -117,7 +126,8 @@ if ads_file and pmf_file and gran_file:
     map_df["MAP"] = map_df["MAP"].str.upper().str.strip()
 
     geo2map = map_df.set_index("GEOGRAPHY")["MAP"].to_dict()
-    ads_work["_MAP"] = ads_work["_G"].map(geo2map)
+    ads_work["_MAP"] = ads_work["_G"].apply(normalize_geo).map({normalize_geo(k): v for k, v in geo2map.items()})
+
 
     skip_triples = set()
     import re
@@ -175,7 +185,7 @@ if ads_file and pmf_file and gran_file:
                 skipped_rows.append((i, G[i], S[i], M[i], col))
                 continue
 
-            mult = pmf_dict.get((G[i], S[i], col_u))
+            mult = pmf_dict.get((normalize_geo(G[i]), S[i], col_u))
             if mult is None or pd.isna(column_vals.iat[i]):
                 continue
 
