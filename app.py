@@ -328,7 +328,7 @@ if all(current_files):
                                 continue
 
                             updated = col_values.iat[i] * mult
-                            result_ads.at[i, col] = updated
+                            result_ads.at[i, col] = str(updated)
                             multiplied_rows.append((i, geo, season, map_code, col, col_values.iat[i], mult, updated))
                     
                     # 5. Save Results
